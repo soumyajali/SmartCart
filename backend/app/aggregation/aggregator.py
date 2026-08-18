@@ -1,6 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import os
+import re
+import difflib
 from sqlalchemy import create_engine, text
 from app.aggregation.amazon_adapter import AmazonLiveAdapter
 from app.aggregation.flipkart_adapter import FlipkartLiveAdapter
@@ -13,6 +15,11 @@ db_host = os.getenv("DB_HOST", "localhost")
 db_name = os.getenv("DB_NAME", "smartcart")
 mysql_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}/{db_name}"
 engine = create_engine(mysql_uri)
+
+def normalize_name(name):
+    # Remove special characters, extra spaces, and lowercase for robust matching
+    name = re.sub(r'[^a-zA-Z0-9\s]', '', name).lower()
+    return " ".join(name.split())
 
 class ProductAggregator:
     def __init__(self):
@@ -47,14 +54,23 @@ class ProductAggregator:
         unified_products = {}
         
         for item in all_results:
-            words = item["name"].lower().split()
-            group_key = " ".join(words[:2]) if len(words) >= 2 else item["name"].lower()
+            norm_name = normalize_name(item["name"])
+            matched_key = None
             
-            if len(item["product_id"]) < 30: 
-                group_key = item["product_id"]
+            # Buyhatke-style Advanced Matching
+            best_ratio = 0.0
+            for existing_key in unified_products.keys():
+                ratio = difflib.SequenceMatcher(None, norm_name, existing_key).ratio()
+                # 65% similarity is usually good enough for identifying the same product model
+                if ratio > 0.65 and ratio > best_ratio:
+                    best_ratio = ratio
+                    matched_key = existing_key
+                    
+            if not matched_key:
+                matched_key = norm_name
 
-            if group_key not in unified_products:
-                unified_products[group_key] = {
+            if matched_key not in unified_products:
+                unified_products[matched_key] = {
                     "product_id": item["product_id"],
                     "name": item["name"],
                     "brand": item["brand"],
@@ -64,17 +80,28 @@ class ProductAggregator:
                     "specifications": item["specifications"],
                     "listings": []
                 }
+                
+            # Coupon & Deal Injection Logic
+            discount = item.get("discount", 0)
+            availability = item.get("availability", "In Stock")
             
-            unified_products[group_key]["listings"].append({
+            if discount > 30:
+                availability = f"In Stock • 🔥 Use code SMART{discount} for {discount}% OFF"
+                if "🔥 DEAL ALERT" not in unified_products[matched_key]["name"]:
+                    unified_products[matched_key]["name"] = f"🔥 DEAL ALERT: {unified_products[matched_key]['name']}"
+            elif discount > 15:
+                availability = f"In Stock • 🎉 Apply coupon EXTRA10 at checkout"
+            
+            unified_products[matched_key]["listings"].append({
                 "id": item["id"],
                 "platform": item["platform"],
                 "seller": item["seller"],
                 "price": item["price"],
                 "original_price": item["original_price"],
-                "discount": item["discount"],
+                "discount": discount,
                 "rating": item["rating"],
                 "review_count": item["review_count"],
-                "availability": item["availability"],
+                "availability": availability,
                 "product_url": item["product_url"]
             })
 
@@ -142,6 +169,18 @@ class ProductAggregator:
                                 "rating": listing["rating"],
                                 "review_count": listing["review_count"],
                                 "product_url": listing["product_url"]
+                            })
+                            
+                    # Buyhatke-style Price History Tracking
+                    for listing in prod["listings"]:
+                        listing_row = conn.execute(text("SELECT id FROM product_listings WHERE product_url = :url"), {"url": listing["product_url"]}).fetchone()
+                        if listing_row:
+                            conn.execute(text("""
+                                INSERT INTO price_history (listing_id, price) 
+                                VALUES (:listing_id, :price)
+                            """), {
+                                "listing_id": listing_row[0],
+                                "price": listing["price"]
                             })
                             
             print("Successfully cached search results to DB.")
