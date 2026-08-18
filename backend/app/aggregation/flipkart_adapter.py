@@ -37,10 +37,10 @@ class FlipkartLiveAdapter(BasePlatformAdapter):
                 )
                 page = context.new_page()
                 url = f"https://www.flipkart.com/search?q={query.replace(' ', '+')}"
-                page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                page.goto(url, wait_until="domcontentloaded", timeout=4000)
                 
                 try:
-                    page.wait_for_selector('div[data-id]', timeout=8000)
+                    page.wait_for_selector('div[data-id]', timeout=2000)
                 except:
                     browser.close()
                     return []

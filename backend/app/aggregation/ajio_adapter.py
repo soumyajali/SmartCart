@@ -37,11 +37,11 @@ class AjioLiveAdapter(BasePlatformAdapter):
                 )
                 page = context.new_page()
                 url = f"https://www.ajio.com/search/?text={query.replace(' ', '%20')}"
-                page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                page.goto(url, wait_until="domcontentloaded", timeout=4000)
                 
                 # Wait for items to load
                 try:
-                    page.wait_for_selector('.item.rilrtl-products-list__item', timeout=8000)
+                    page.wait_for_selector('.item.rilrtl-products-list__item', timeout=2000)
                 except:
                     browser.close()
                     return []
