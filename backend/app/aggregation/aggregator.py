@@ -53,9 +53,9 @@ class ProductAggregator:
 
         # If scrapers failed (e.g. Render missing Playwright or IP block) and MySQL is empty,
         # fallback to robust dummy data so the user can test the UI features!
-        if not all_results:
-            print("Scraping failed and DB is empty. Injecting Buyhatke Mock Data.")
-            all_results = [
+        if len(all_results) < 2:
+            print("Scraping failed or returned few results. Injecting Buyhatke Mock Data.")
+            all_results.extend([
                 {
                     "id": "MOCK-AMZ-1",
                     "product_id": "PROD-IPHONE15",
