@@ -95,3 +95,16 @@ export const getPriceHistory = async (productId) => {
     throw error.response?.data || { message: 'Unable to fetch price history' };
   }
 };
+
+export const createPriceAlert = async (productId, email, targetPrice) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/products/alerts`, {
+      product_id: productId,
+      email: email,
+      target_price: targetPrice
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Unable to create price alert' };
+  }
+};

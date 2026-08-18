@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { getProductReviews, searchProducts } from '../services/productApi';
+import { getProductReviews, searchProducts, createPriceAlert } from '../services/productApi';
 import PriceHistoryChart from '../components/PriceHistoryChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
@@ -38,6 +38,25 @@ const ProductDetails = () => {
   const [ratings, setRatings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Price Alert State
+  const [alertEmail, setAlertEmail] = useState('');
+  const [alertTargetPrice, setAlertTargetPrice] = useState('');
+  const [alertStatus, setAlertStatus] = useState(null);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+
+  const handleCreateAlert = async (e) => {
+    e.preventDefault();
+    setAlertStatus('loading');
+    try {
+      await createPriceAlert(id, alertEmail, alertTargetPrice);
+      setAlertStatus('success');
+      setTimeout(() => { setShowAlertModal(false); setAlertStatus(null); }, 2000);
+    } catch (err) {
+      setAlertStatus('error');
+      setTimeout(() => setAlertStatus(null), 3000);
+    }
+  };
 
   useEffect(() => {
     if (!product) {
@@ -140,14 +159,30 @@ const ProductDetails = () => {
             {product.name}
           </motion.h1>
           
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            style={{ color: 'var(--text-muted)', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '2rem' }}
-          >
-            {product.brand} • {product.category}
-          </motion.p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2rem' }}>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              style={{ color: 'var(--text-muted)', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+            >
+              {product.brand} • {product.category}
+            </motion.p>
+
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5 }}
+              onClick={() => {
+                setAlertTargetPrice(minPrice);
+                setShowAlertModal(true);
+              }}
+              className="btn-outline"
+              style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+            >
+              🔔 SET PRICE ALERT
+            </motion.button>
+          </div>
           
           <motion.p 
             initial={{ opacity: 0 }}
@@ -203,6 +238,49 @@ const ProductDetails = () => {
               })}
             </div>
           </div>
+
+          {/* Coupons Section */}
+          {product.coupons && product.coupons.length > 0 && (
+            <div style={{ marginBottom: '4rem' }}>
+              <h3 style={{ fontSize: '0.9rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                AVAILABLE OFFERS
+              </h3>
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {product.coupons.map((coupon, i) => (
+                  <motion.div 
+                    key={i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.8 + i * 0.1 }}
+                    style={{ 
+                      padding: '1.25rem', 
+                      backgroundColor: 'var(--surface)', 
+                      border: '1px dashed var(--primary)', 
+                      borderRadius: 'var(--radius-sm)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem' }}>{coupon.description}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Auto-applies if purchased via supported platforms</div>
+                    </div>
+                    <div style={{ 
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+                      color: 'var(--primary)', 
+                      padding: '0.5rem 1rem', 
+                      fontWeight: 900, 
+                      letterSpacing: '0.1em',
+                      borderRadius: '4px'
+                    }}>
+                      {coupon.code}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -297,6 +375,84 @@ const ProductDetails = () => {
           </div>
         )}
       </div>
+      {/* Price Alert Modal */}
+      <AnimatePresence>
+        {showAlertModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem'
+            }}
+            onClick={() => setShowAlertModal(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: 'var(--surface)',
+                padding: '3rem',
+                borderRadius: 'var(--radius-lg)',
+                maxWidth: '500px',
+                width: '100%',
+                border: '1px solid var(--border-color)'
+              }}
+            >
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '1rem' }}>Set Price Alert</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: 1.5 }}>
+                We'll email you automatically when the price drops below your target. Current lowest price is ₹{minPrice.toLocaleString('en-IN')}.
+              </p>
+              
+              <form onSubmit={handleCreateAlert}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '0.5rem' }}>EMAIL ADDRESS</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={alertEmail}
+                    onChange={(e) => setAlertEmail(e.target.value)}
+                    style={{ width: '100%', padding: '1rem', backgroundColor: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: '4px' }}
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <div style={{ marginBottom: '2rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '0.5rem' }}>TARGET PRICE (₹)</label>
+                  <input 
+                    type="number" 
+                    required
+                    max={minPrice}
+                    value={alertTargetPrice}
+                    onChange={(e) => setAlertTargetPrice(e.target.value)}
+                    style={{ width: '100%', padding: '1rem', backgroundColor: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: '4px' }}
+                  />
+                </div>
+                
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  style={{ width: '100%', padding: '1rem' }}
+                  disabled={alertStatus === 'loading' || alertStatus === 'success'}
+                >
+                  {alertStatus === 'loading' ? 'SAVING...' : alertStatus === 'success' ? 'ALERT SET! ✓' : 'NOTIFY ME'}
+                </button>
+                {alertStatus === 'error' && (
+                  <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '1rem', textAlign: 'center' }}>Failed to set alert. Try again.</p>
+                )}
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

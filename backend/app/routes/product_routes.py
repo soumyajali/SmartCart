@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from datetime import datetime
 from app.aggregation.aggregator import ProductAggregator
 
 product_bp = Blueprint('products', __name__)
@@ -279,6 +280,36 @@ def get_analytics():
             "success": False,
             "error": {
                 "code": "ANALYTICS_FAILED",
+                "message": str(e)
+            }
+        }), 500
+
+@product_bp.route('/alerts', methods=['POST'])
+def create_alert():
+    try:
+        data = request.json
+        if not data or not data.get("email") or not data.get("product_id") or not data.get("target_price"):
+            return jsonify({"success": False, "message": "Missing required fields."}), 400
+            
+        alert = {
+            "email": data["email"],
+            "product_id": data["product_id"],
+            "target_price": float(data["target_price"]),
+            "created_at": datetime.utcnow().isoformat(),
+            "is_active": True
+        }
+        
+        mongo_db["price_alerts"].insert_one(alert)
+        
+        return jsonify({
+            "success": True,
+            "message": "Price drop alert successfully saved."
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code": "ALERT_FAILED",
                 "message": str(e)
             }
         }), 500

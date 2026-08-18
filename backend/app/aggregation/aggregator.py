@@ -78,19 +78,26 @@ class ProductAggregator:
                     "description": item["description"],
                     "image_url": item["image_url"],
                     "specifications": item["specifications"],
-                    "listings": []
+                    "listings": [],
+                    "coupons": []
                 }
                 
-            # Coupon & Deal Injection Logic
             discount = item.get("discount", 0)
             availability = item.get("availability", "In Stock")
             
-            if discount > 30:
-                availability = f"In Stock • 🔥 Use code SMART{discount} for {discount}% OFF"
-                if "🔥 DEAL ALERT" not in unified_products[matched_key]["name"]:
-                    unified_products[matched_key]["name"] = f"🔥 DEAL ALERT: {unified_products[matched_key]['name']}"
-            elif discount > 15:
-                availability = f"In Stock • 🎉 Apply coupon EXTRA10 at checkout"
+            # True Buyhatke Coupons: generate dedicated coupon objects if discount > 0
+            if discount > 30 and not any(c["code"] == f"SMART{discount}" for c in unified_products[matched_key]["coupons"]):
+                unified_products[matched_key]["coupons"].append({
+                    "code": f"SMART{discount}",
+                    "description": f"Get {discount}% OFF instantly on checkout.",
+                    "discount_percentage": discount
+                })
+            elif discount > 15 and not any(c["code"] == "EXTRA10" for c in unified_products[matched_key]["coupons"]):
+                unified_products[matched_key]["coupons"].append({
+                    "code": "EXTRA10",
+                    "description": "Apply coupon for an additional 10% off.",
+                    "discount_percentage": 10
+                })
             
             unified_products[matched_key]["listings"].append({
                 "id": item["id"],
