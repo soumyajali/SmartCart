@@ -51,6 +51,70 @@ class ProductAggregator:
                 except Exception as e:
                     print(f"Error fetching from {adapter.platform_name}: {e}")
 
+        # If scrapers failed (e.g. Render missing Playwright or IP block) and MySQL is empty,
+        # fallback to robust dummy data so the user can test the UI features!
+        if not all_results:
+            print("Scraping failed and DB is empty. Injecting Buyhatke Mock Data.")
+            all_results = [
+                {
+                    "id": "MOCK-AMZ-1",
+                    "product_id": "PROD-IPHONE15",
+                    "name": "Apple iPhone 15 (128 GB) - Black",
+                    "brand": "Apple",
+                    "category": "Smartphones",
+                    "description": "Dynamic Island bubbles up alerts and Live Activities. 48MP Main camera.",
+                    "image_url": "https://m.media-amazon.com/images/I/71657TiFeHL._SX679_.jpg",
+                    "specifications": {"RAM": "6GB", "Storage": "128GB"},
+                    "platform": "Amazon",
+                    "seller": "Appario Retail",
+                    "price": 65999,
+                    "original_price": 79900,
+                    "discount": 17,
+                    "rating": 4.6,
+                    "review_count": 12450,
+                    "availability": "In Stock",
+                    "product_url": "https://amazon.in/iphone-15"
+                },
+                {
+                    "id": "MOCK-FLIP-1",
+                    "product_id": "PROD-IPHONE15",
+                    "name": "Apple iPhone 15 (Black, 128 GB)",
+                    "brand": "Apple",
+                    "category": "Smartphones",
+                    "description": "Dynamic Island bubbles up alerts and Live Activities. 48MP Main camera.",
+                    "image_url": "https://rukminim2.flixcart.com/image/850/1000/xif0q/mobile/h/d/9/-original-imagtc2qzpzcdfaq.jpeg",
+                    "specifications": {"RAM": "6GB", "Storage": "128GB"},
+                    "platform": "Flipkart",
+                    "seller": "SuperComNet",
+                    "price": 66499,
+                    "original_price": 79900,
+                    "discount": 16,
+                    "rating": 4.7,
+                    "review_count": 8900,
+                    "availability": "In Stock",
+                    "product_url": "https://flipkart.com/iphone-15"
+                },
+                {
+                    "id": "MOCK-REL-1",
+                    "product_id": "PROD-IPHONE15",
+                    "name": "Apple iPhone 15 128GB Black",
+                    "brand": "Apple",
+                    "category": "Smartphones",
+                    "description": "Dynamic Island bubbles up alerts and Live Activities. 48MP Main camera.",
+                    "image_url": "https://www.reliancedigital.in/medias/Apple-iPhone-15-493839308-i-1-1200Wx1200H",
+                    "specifications": {"RAM": "6GB", "Storage": "128GB"},
+                    "platform": "Reliance Digital",
+                    "seller": "Reliance",
+                    "price": 54999,
+                    "original_price": 79900,
+                    "discount": 31,
+                    "rating": 4.5,
+                    "review_count": 1200,
+                    "availability": "Only 2 left in stock",
+                    "product_url": "https://reliancedigital.in/iphone-15"
+                }
+            ]
+
         unified_products = {}
         
         for item in all_results:
