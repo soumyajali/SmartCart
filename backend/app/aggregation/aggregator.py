@@ -113,7 +113,7 @@ class ProductAggregator:
                     "availability": "Only 2 left in stock",
                     "product_url": "https://reliancedigital.in/iphone-15"
                 }
-            ]
+            ])
 
         unified_products = {}
         
