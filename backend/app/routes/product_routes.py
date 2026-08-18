@@ -142,7 +142,7 @@ def get_reviews(product_id):
 
 from sqlalchemy import text, create_engine
 
-mysql_uri = os.getenv("DB_URI", f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', '')}@{os.getenv('DB_HOST', 'localhost')}/{os.getenv('DB_NAME', 'smartcart')}")
+mysql_uri = os.getenv("DB_URI", f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', '')}@{os.getenv('DB_HOST', 'localhost')}/{os.getenv('DB_NAME', 'smartcart')}?connect_timeout=2")
 engine = create_engine(mysql_uri)
 
 @product_bp.route('/<product_id>/price-history', methods=['GET'])

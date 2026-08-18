@@ -13,7 +13,7 @@ db_user = os.getenv("DB_USER", "root")
 db_pass = os.getenv("DB_PASSWORD", "")
 db_host = os.getenv("DB_HOST", "localhost")
 db_name = os.getenv("DB_NAME", "smartcart")
-mysql_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}/{db_name}"
+mysql_uri = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}/{db_name}?connect_timeout=2"
 engine = create_engine(mysql_uri)
 
 def normalize_name(name):
