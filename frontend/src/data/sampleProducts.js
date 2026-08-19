@@ -1,6 +1,3 @@
-// Intentional failure for testing the application's error handling.
-throw new Error('Intentional test error: sampleProducts failed to load.');
-
 export const sampleCategories = [
   ['Smartphones', 'Galaxy S24 5G', 'Samsung', 68999],
   ['Laptops', 'MacBook Air M2', 'Apple', 89990],
