@@ -42,6 +42,15 @@ from app.routes.chatbot_routes import chatbot_bp
 def health_check():
     return jsonify({"status": "healthy"})
 
+@app.route('/', methods=['GET'])
+def backend_root():
+    return jsonify({
+        "service": "SmartCart API",
+        "status": "running",
+        "frontend": "http://localhost:5174/",
+        "health": "/api/health"
+    })
+
 app.register_blueprint(product_bp, url_prefix='/api/products')
 app.register_blueprint(admin_bp, url_prefix='/api/admin')
 app.register_blueprint(chatbot_bp, url_prefix='/api/chatbot')

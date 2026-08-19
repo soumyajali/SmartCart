@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { searchProducts } from '../services/productApi';
 import ProductCard from '../components/ProductCard';
+import sampleProducts, { findSampleProducts } from '../data/sampleProducts';
 
 const Search = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
+  const category = searchParams.get('category') || '';
   
   const [results, setResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [usingSamples, setUsingSamples] = useState(false);
 
   // Filters State
   const [sortOption, setSortOption] = useState('relevance');
@@ -19,13 +22,25 @@ const Search = () => {
 
   useEffect(() => {
     const fetchResults = async () => {
+      if (!query) {
+        setResults(category ? findSampleProducts('', category) : sampleProducts);
+        setUsingSamples(true);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
         const data = await searchProducts(query);
-        setResults(data.products || []);
+        const liveProducts = data.products || [];
+        setResults(liveProducts.length ? liveProducts : findSampleProducts(query));
+        setUsingSamples(liveProducts.length === 0);
       } catch (err) {
-        setError(err.message || 'Something went wrong');
+        setResults(findSampleProducts(query));
+        setUsingSamples(true);
+        setError(null);
       } finally {
         setLoading(false);
       }
@@ -33,7 +48,7 @@ const Search = () => {
 
     // Debounce is mostly for typing, but since we search on Enter/submit in Navbar, we just fetch.
     fetchResults();
-  }, [query]);
+  }, [query, category]);
 
   // Apply Filters & Sorting
   useEffect(() => {
@@ -78,17 +93,17 @@ const Search = () => {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
+    <div className="catalog-page">
       {/* Sidebar Filters */}
-      <aside style={{ width: '250px', flexShrink: 0, padding: '1.5rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-        <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>Filters</h3>
+      <aside className="catalog-filters">
+        <div className="catalog-filters__heading"><span>Refine results</span><span className="catalog-filters__count">{filteredResults.length}</span></div>
         
         <div style={{ marginBottom: '1.5rem' }}>
           <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Sort By</h4>
           <select 
             value={sortOption} 
             onChange={(e) => setSortOption(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}
+            className="catalog-select"
           >
             <option value="relevance">Recommended</option>
             <option value="price_asc">Price: Low to High</option>
@@ -126,12 +141,17 @@ const Search = () => {
       </aside>
 
       {/* Main Area */}
-      <main style={{ flex: 1 }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '600' }}>
-            {query ? `Search results for "${query}"` : 'Product Catalog'}
+      <main className="catalog-results">
+        <div className="catalog-header">
+          <div>
+          <p className="catalog-kicker">COMPARE & SAVE</p>
+          <h2>
+            {query ? `Search results for "${query}"` : category || 'Product Catalog'}
           </h2>
-          <p style={{ color: 'var(--text-muted)' }}>{filteredResults.length} products available</p>
+          <p>{filteredResults.length} products with live retailer prices</p>
+          {usingSamples && <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.35rem' }}>Offline catalogue — images are representative and retailer prices are sample data.</p>}
+          </div>
+          <button className="catalog-view-button" onClick={() => { setMinRating(0); setSelectedPlatforms([]); setSortOption('relevance'); }}>Reset filters</button>
         </div>
 
         {loading && (
@@ -157,7 +177,7 @@ const Search = () => {
         )}
 
         {!loading && !error && filteredResults.length > 0 && (
-          <div className="product-grid" style={{ marginTop: 0 }}>
+          <div className="product-grid">
             {filteredResults.map(product => (
               <ProductCard key={product.product_id} product={product} />
             ))}
@@ -166,9 +186,11 @@ const Search = () => {
 
         {!loading && !error && filteredResults.length === 0 && (
           <div style={{ textAlign: 'center', padding: '4rem', backgroundColor: 'var(--surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ marginBottom: '1rem' }}>No products found</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>We couldn't find products matching your filters.</p>
-            <button className="btn-primary" onClick={() => { setMinRating(0); setSelectedPlatforms([]); setSortOption('relevance'); }}>Clear Filters</button>
+            <h3 style={{ marginBottom: '1rem' }}>{query ? 'No products found' : 'Search for a product to compare'}</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              {query ? "We couldn't find products matching your filters." : 'Use the search bar to compare live prices and retailer reviews.'}
+            </p>
+            {query && <button className="btn-primary" onClick={() => { setMinRating(0); setSelectedPlatforms([]); setSortOption('relevance'); }}>Clear Filters</button>}
           </div>
         )}
       </main>

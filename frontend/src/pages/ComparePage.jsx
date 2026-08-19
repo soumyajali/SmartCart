@@ -1,6 +1,7 @@
 import { useCompare } from '../context/CompareContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
+import { createProductPlaceholder, useProductImageFallback } from '../utils/productImage';
 
 const ComparePage = () => {
   const { compareItems, removeFromCompare } = useCompare();
@@ -120,7 +121,7 @@ const ComparePage = () => {
                 >
                   ✕
                 </button>
-                <img src={product.image_url} alt={product.name} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                <img src={product.image_url || createProductPlaceholder(product.category, product.name)} alt={product.name} onError={(event) => useProductImageFallback(event, product.category, product.name)} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
               </div>
               
               <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', height: '100px' }}>

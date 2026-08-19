@@ -4,6 +4,7 @@ import { getProductReviews, searchProducts, createPriceAlert } from '../services
 import PriceHistoryChart from '../components/PriceHistoryChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
+import { createProductPlaceholder, useProductImageFallback } from '../utils/productImage';
 
 // Animated Counter component for prices and scores
 const AnimatedCounter = ({ value, prefix = '', suffix = '' }) => {
@@ -141,10 +142,11 @@ const ProductDetails = () => {
           <motion.img 
             whileHover={{ scale: 1.1 }}
             transition={{ duration: 0.5 }}
-            src={product.image_url} 
+            src={product.image_url || createProductPlaceholder(product.category, product.name)}
             alt={product.name} 
             style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain', mixBlendMode: 'multiply', cursor: 'crosshair' }} 
             data-cursor="explore"
+            onError={(event) => useProductImageFallback(event, product.category, product.name)}
           />
         </motion.div>
 

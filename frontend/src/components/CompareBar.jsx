@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useCompare } from '../context/CompareContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createProductPlaceholder, useProductImageFallback } from '../utils/productImage';
 
 const CompareBar = () => {
   const { compareItems, removeFromCompare, clearCompare } = useCompare();
@@ -55,9 +56,10 @@ const CompareBar = () => {
                   }}
                 >
                   <img 
-                    src={item.image_url} 
+                    src={item.image_url || createProductPlaceholder(item.category, item.name)}
                     alt={item.name} 
                     style={{ width: '40px', height: '40px', objectFit: 'contain', mixBlendMode: 'multiply' }}
+                    onError={(event) => useProductImageFallback(event, item.category, item.name)}
                   />
                   <div style={{ flex: 1, overflow: 'hidden' }}>
                     <div style={{ fontSize: '0.85rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

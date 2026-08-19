@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { sampleCategories } from '../../data/sampleProducts';
 
 const MegaMenu = ({ isOpen, onClose }) => {
-  const categories = [
-    { name: 'Laptops', link: '/search?category=Laptops' },
-    { name: 'Smartphones', link: '/search?category=Smartphones' },
-    { name: 'Audio', link: '/search?category=Audio' },
-    { name: 'Gaming', link: '/search?category=Gaming' },
-    { name: 'Home Appliances', link: '/search?category=Home' },
-    { name: 'Fashion', link: '/search?category=Fashion' },
-  ];
+  const categories = sampleCategories.map(([name]) => ({ name, link: `/search?category=${encodeURIComponent(name)}` }));
 
   return (
     <AnimatePresence>

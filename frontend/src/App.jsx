@@ -8,7 +8,6 @@ import ComparePage from './pages/ComparePage';
 import CompareBar from './components/CompareBar';
 import ProductDetails from './pages/ProductDetails';
 import Analytics from './pages/Analytics';
-import AdminDashboard from './pages/AdminDashboard';
 import Preloader from './components/animations/Preloader';
 import CustomCursor from './components/animations/CustomCursor';
 import Chatbot from './components/animations/Chatbot';
@@ -35,9 +34,6 @@ const AnimatedRoutes = () => {
         } />
         <Route path="/analytics" element={
           <PageTransition><Analytics /></PageTransition>
-        } />
-        <Route path="/admin" element={
-          <PageTransition><AdminDashboard /></PageTransition>
         } />
       </Routes>
     </AnimatePresence>

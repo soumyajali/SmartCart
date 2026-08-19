@@ -1,9 +1,10 @@
 import { useCompare } from '../context/CompareContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart } from 'lucide-react';
+import { ArrowUpRight, Heart, Scale } from 'lucide-react';
 import { useState } from 'react';
 import MagneticButton from './animations/MagneticButton';
+import { createProductPlaceholder, useProductImageFallback } from '../utils/productImage';
 
 const ProductCard = ({ product }) => {
   const { compareItems, addToCompare, removeFromCompare } = useCompare();
@@ -12,159 +13,79 @@ const ProductCard = ({ product }) => {
   
   const isSelected = compareItems.some(item => item.product_id === product.product_id);
   
-  const bestListing = product.listings.reduce((prev, curr) => 
+  const lowestPriceListing = product.listings.reduce((prev, curr) =>
     prev.price < curr.price ? prev : curr
   );
+  const bestListing = product.listings.find(listing => listing.is_recommended) || lowestPriceListing;
 
   const handleViewDetails = () => {
     navigate(`/products/${product.product_id}`, { state: { product } });
   };
 
   return (
-    <motion.div 
-      className="card"
+    <motion.article 
+      className="product-card"
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      animate={{ 
-        y: isHovered ? -10 : 0, 
-        boxShadow: isHovered ? 'var(--shadow-lg)' : 'var(--shadow-sm)' 
-      }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        height: '100%', 
-        position: 'relative',
-        cursor: 'pointer',
-        overflow: 'hidden'
-      }}
+      animate={{ y: isHovered ? -4 : 0 }}
+      transition={{ duration: 0.25 }}
       onClick={handleViewDetails}
       data-cursor="view"
     >
-      <motion.div 
-        animate={{ opacity: isHovered ? 1 : 0, scale: isHovered ? 1 : 0.8 }}
-        style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 20 }}
-        onClick={(e) => { e.stopPropagation(); }}
-      >
-        <Heart size={24} color="var(--text-main)" strokeWidth={1.5} />
-      </motion.div>
-
-      {product.smartcart_choice && (
-        <div style={{
-          position: 'absolute',
-          top: '1.5rem',
-          left: '1.5rem',
-          backgroundColor: 'var(--primary)',
-          color: 'white',
-          padding: '0.35rem 0.75rem',
-          fontWeight: 800,
-          fontSize: '0.7rem',
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          zIndex: 10,
-        }}>
-          SmartCart Choice
+      <div className="product-card__media">
+        <div className="product-card__badges">
+          {product.smartcart_choice && <span className="product-card__badge">SmartCart assured</span>}
+          {lowestPriceListing.discount > 0 && <span className="product-card__discount">{lowestPriceListing.discount}% off</span>}
         </div>
-      )}
-      
-      <div style={{ 
-        padding: '2.5rem', 
-        height: '280px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#f9f9f9'
-      }}>
+        <button className="product-card__icon-button" aria-label="Add to wishlist" onClick={(e) => e.stopPropagation()}>
+          <Heart size={18} strokeWidth={2} />
+        </button>
         <motion.img 
           animate={{ scale: isHovered ? 1.06 : 1, y: isHovered ? -5 : 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          src={product.image_url || 'https://via.placeholder.com/200x200?text=No+Image'} 
+          transition={{ duration: 0.35 }}
+          src={product.image_url || createProductPlaceholder(product.category, product.name)}
           alt={`${product.brand} ${product.name}`} 
-          style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }}
+          className="product-card__image"
+          onError={(event) => useProductImageFallback(event, product.category, product.name)}
         />
       </div>
-      
-      <motion.div 
-        animate={{ y: isHovered ? -15 : 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        style={{ padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: 'var(--surface)' }}
-      >
-        <div style={{ marginBottom: '1rem' }}>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>{product.name}</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {product.brand} • {product.category}
-          </p>
+      <div className="product-card__body">
+        <p className="product-card__eyebrow">{product.brand} / {product.category}</p>
+        <h3 className="product-card__title">{product.name}</h3>
+        <div className="product-card__rating-row">
+          {product.adjusted_rating || bestListing.rating > 0 ? <>
+            <span className="product-card__rating">{product.adjusted_rating ? product.adjusted_rating.toFixed(1) : Number(bestListing.rating).toFixed(1)} ★</span>
+            <span>({bestListing.review_count.toLocaleString('en-IN')} reviews)</span>
+          </> : <span>Retailer rating unavailable</span>}
+          {product.aggregate_trust_score && <strong>AI {product.aggregate_trust_score}</strong>}
         </div>
-
-        <motion.div 
-          animate={{ x: isHovered ? 5 : 0 }}
-          style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}
-        >
-          {product.listings.map(l => (
-            <span key={l.id} style={{ fontSize: '0.65rem', fontWeight: 800, padding: '0.2rem 0.5rem', border: '1px solid var(--border-color)', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
-              {l.platform.toUpperCase()}
-            </span>
-          ))}
-        </motion.div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem', marginTop: 'auto' }}>
+        <div className="product-card__price-row">
           <div>
-            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-              ₹{bestListing.price.toLocaleString('en-IN')}
-            </span>
-            {bestListing.discount > 0 && (
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textDecoration: 'line-through', marginLeft: '0.5rem' }}>
-                ₹{bestListing.original_price.toLocaleString('en-IN')}
-              </span>
-            )}
+            <span className="product-card__price">₹{lowestPriceListing.price.toLocaleString('en-IN')}</span>
+            {lowestPriceListing.discount > 0 && <span className="product-card__usual">₹{lowestPriceListing.original_price.toLocaleString('en-IN')}</span>}
           </div>
-          {bestListing.discount > 0 && (
-            <span style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '0.9rem' }}>-{bestListing.discount}%</span>
-          )}
+          <span className="product-card__lowest">Best offer: {bestListing.platform}</span>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-main)', fontWeight: 800 }}>
-            ★ {product.adjusted_rating ? product.adjusted_rating.toFixed(1) : bestListing.rating.toFixed(1)}
-          </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            ({bestListing.review_count.toLocaleString()})
-          </div>
-          {product.aggregate_trust_score && (
-            <div style={{ marginLeft: 'auto', fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.05em', color: product.aggregate_trust_score > 70 ? 'var(--success)' : 'var(--warning)' }}>
-              AI {product.aggregate_trust_score}
-            </div>
-          )}
+        <div className="product-card__stores">
+          {product.listings.slice(0, 3).map(listing => (
+            <span key={listing.id}><b>{listing.platform}</b> ₹{listing.price.toLocaleString('en-IN')}{listing.is_recommended ? ' • Best value' : ''}</span>
+          ))}
         </div>
-      </motion.div>
-
-      {/* Hidden Hover Actions */}
-      <motion.div 
-        initial={{ y: '100%' }}
-        animate={{ y: isHovered ? '0%' : '100%' }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        style={{ 
-          position: 'absolute', 
-          bottom: 0, left: 0, right: 0, 
-          padding: '1rem', 
-          backgroundColor: 'var(--surface)',
-          borderTop: '1px solid var(--border-color)',
-          display: 'flex',
-        }}
-      >
-        <MagneticButton 
-          className={isSelected ? "btn-outline" : "btn-primary"} 
-          style={{ width: '100%', padding: '1rem', fontSize: '0.8rem' }}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isSelected) removeFromCompare(product.product_id);
-            else addToCompare(product);
-          }}
-        >
-          {isSelected ? 'REMOVE FROM COMPARE' : 'ADD TO COMPARE'}
-        </MagneticButton>
-      </motion.div>
-    </motion.div>
+        <div className="product-card__actions">
+          <MagneticButton
+            className="btn-primary"
+            style={{ flex: 1, padding: '0.75rem 1rem', fontSize: '0.72rem' }}
+            onClick={(e) => { e.stopPropagation(); window.open(bestListing.product_url || '#', '_blank', 'noopener,noreferrer'); }}
+          >
+            BUY NOW <ArrowUpRight size={15} />
+          </MagneticButton>
+          <button className={isSelected ? 'product-card__compare product-card__compare--active' : 'product-card__compare'} aria-label="Compare product" onClick={(e) => { e.stopPropagation(); if (isSelected) removeFromCompare(product.product_id); else addToCompare(product); }}>
+            <Scale size={17} />
+          </button>
+        </div>
+      </div>
+      <div className="product-card__compare-label">{isSelected ? 'Added to compare' : 'Add to compare'}</div>
+    </motion.article>
   );
 };
 

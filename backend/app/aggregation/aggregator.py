@@ -8,6 +8,8 @@ from app.aggregation.amazon_adapter import AmazonLiveAdapter
 from app.aggregation.flipkart_adapter import FlipkartLiveAdapter
 from app.aggregation.myntra_adapter import MyntraLiveAdapter
 from app.aggregation.ajio_adapter import AjioLiveAdapter
+from app.aggregation.dummy_json_adapter import DummyJsonAdapter
+from app.aggregation.google_shopping_adapter import GoogleShoppingAdapter
 
 db_user = os.getenv("DB_USER", "root")
 db_pass = os.getenv("DB_PASSWORD", "")
@@ -24,6 +26,7 @@ def normalize_name(name):
 class ProductAggregator:
     def __init__(self):
         self.adapters = [
+            GoogleShoppingAdapter(),
             AmazonLiveAdapter(),
             FlipkartLiveAdapter(),
             MyntraLiveAdapter(),
@@ -51,10 +54,15 @@ class ProductAggregator:
                 except Exception as e:
                     print(f"Error fetching from {adapter.platform_name}: {e}")
 
-        # If scrapers failed (e.g. Render missing Playwright or IP block) and MySQL is empty,
-        # fallback to robust dummy data so the user can test the UI features!
-        if len(all_results) < 2:
-            print("Scraping failed or returned few results. Injecting Buyhatke Mock Data.")
+        # Retailers can block automated lookups and Google Shopping requires a
+        # configured API key. Keep search useful in that case with a catalog
+        # source whose thumbnail and direct product page are from the same item.
+        if not all_results:
+            all_results = DummyJsonAdapter().search(query)
+
+        # Demo records are opt-in. Production searches must never silently show fake products.
+        if os.getenv("SMARTCART_USE_MOCK_DATA", "false").lower() == "true" and len(all_results) < 2:
+            print("Live sources returned too few results. Injecting opt-in demo data.")
             all_results.extend([
                 {
                     "id": "MOCK-AMZ-1",
@@ -145,6 +153,10 @@ class ProductAggregator:
                     "listings": [],
                     "coupons": []
                 }
+            elif not unified_products[matched_key].get("image_url") and item.get("image_url"):
+                # Preserve the first retailer-hosted product photo available for
+                # this matched product instead of substituting a generic image.
+                unified_products[matched_key]["image_url"] = item["image_url"]
                 
             discount = item.get("discount", 0)
             availability = item.get("availability", "In Stock")
@@ -173,7 +185,8 @@ class ProductAggregator:
                 "rating": item["rating"],
                 "review_count": item["review_count"],
                 "availability": availability,
-                "product_url": item["product_url"]
+                "product_url": item["product_url"],
+                "image_url": item.get("image_url", ""),
             })
 
         final_results = list(unified_products.values())

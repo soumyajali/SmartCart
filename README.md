@@ -109,9 +109,26 @@ cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt # (Flask, SQLAlchemy, PyMySQL, PyMongo, requests, pytest)
+playwright install chromium
 python app.py
 ```
 *(Runs on `http://127.0.0.1:5000`)*
+
+Search results are fetched from the configured retailer adapters (Amazon, Flipkart,
+Myntra, and Ajio). Retailers may block automated requests; in that case SmartCart
+returns only cached records and does not show demo products by default. To enable
+cached records for development, set `SMARTCART_USE_CACHE=true`. To enable demo
+records for UI development only, set `SMARTCART_USE_MOCK_DATA=true` before
+starting the backend.
+
+### Live retailer listings
+
+For reliable live listings and retailer product links, set `SERPAPI_KEY` in
+`backend/.env`. SmartCart then uses SerpApi's Google Shopping endpoint for India,
+which returns current products offered by real merchants. Create a key at
+https://serpapi.com/manage-api-key, add `SERPAPI_KEY=your_key`, and restart the
+backend. The direct Amazon, Flipkart, Myntra, and AJIO adapters continue to run
+as fallbacks, but those sites can block automated browser requests.
 
 ### 3. ML Microservice
 ```bash

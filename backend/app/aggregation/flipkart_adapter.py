@@ -23,8 +23,11 @@ class FlipkartLiveAdapter(BasePlatformAdapter):
             print(f"[{self.platform_name}] Successfully scraped {len(live_results)} items live.")
             return live_results
             
-        print(f"[{self.platform_name}] Live scraping failed or blocked. Falling back to database.")
-        return self._fallback_search(query)
+        if os.getenv("SMARTCART_USE_CACHE", "false").lower() == "true":
+            print(f"[{self.platform_name}] Live scraping failed or blocked. Using cached listings.")
+            return self._fallback_search(query)
+        print(f"[{self.platform_name}] Live scraping failed or blocked. Returning no results.")
+        return []
 
     def _scrape_flipkart(self, query: str) -> list:
         results = []
@@ -90,8 +93,8 @@ class FlipkartLiveAdapter(BasePlatformAdapter):
                             "price": price,
                             "original_price": original_price,
                             "discount": discount,
-                            "rating": 4.0,
-                            "review_count": 100,
+                            "rating": 0,
+                            "review_count": 0,
                             "availability": "In Stock",
                             "seller": "Flipkart Retail",
                             "platform": self.platform_name,

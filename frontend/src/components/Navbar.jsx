@@ -64,7 +64,6 @@ const Navbar = () => {
               CATEGORIES
             </div>
             <Link to="/compare" style={{ fontWeight: 600, fontSize: '0.9rem' }}>COMPARE</Link>
-            <Link to="/admin" style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-muted)' }}>ADMIN</Link>
           </div>
         </div>
 

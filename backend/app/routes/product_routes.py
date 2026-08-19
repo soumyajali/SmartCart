@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
+import math
 from app.aggregation.aggregator import ProductAggregator
 
 product_bp = Blueprint('products', __name__)
@@ -8,6 +9,14 @@ aggregator = ProductAggregator()
 @product_bp.route('/search', methods=['GET'])
 def search():
     query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({
+            "success": False,
+            "error": {
+                "code": "EMPTY_QUERY",
+                "message": "Enter a product to compare."
+            }
+        }), 400
     try:
         results = aggregator.search(query)
         # Attach trust scores and adjusted ratings to aggregated products
@@ -25,19 +34,16 @@ def search():
                 else:
                     product["adjusted_rating"] = None
                     
-                # Recommendation Score: (Adjusted Rating * 20) + (Trust Score * 0.5) - just a basic formula
-                if product["adjusted_rating"] and product["aggregate_trust_score"]:
-                    product["recommendation_score"] = (product["adjusted_rating"] * 20) + (product["aggregate_trust_score"] * 0.5)
-                else:
-                    product["recommendation_score"] = 0
             else:
                 product["aggregate_trust_score"] = None
                 product["adjusted_rating"] = None
-                product["recommendation_score"] = 0
 
-        # Sort by recommendation score descending and mark the top one as SmartCart Choice
+            _score_listings(product)
+
+        # Show the strongest real retailer offer first.  The selected listing is
+        # based on price, rating, review volume, and availability—not invented data.
         results.sort(key=lambda x: x.get("recommendation_score", 0), reverse=True)
-        if results and results[0].get("recommendation_score", 0) > 0:
+        if results:
             results[0]["smartcart_choice"] = True
 
         return jsonify({
@@ -57,6 +63,50 @@ def search():
                 "message": "Unable to retrieve product results."
             }
         }), 500
+
+
+def _score_listings(product):
+    """Annotate a product's live retailer offers with a transparent value score."""
+    listings = product.get("listings", [])
+    if not listings:
+        product["recommendation_score"] = 0
+        return
+
+    prices = [float(listing["price"]) for listing in listings if listing.get("price") is not None]
+    highest_price = max(prices) if prices else 0
+    lowest_price = min(prices) if prices else 0
+
+    for listing in listings:
+        price = float(listing.get("price") or 0)
+        rating = max(0, min(float(listing.get("rating") or 0), 5))
+        review_count = max(0, int(listing.get("review_count") or 0))
+        availability = (listing.get("availability") or "").lower()
+
+        # The lowest listed price receives 45 points. Ratings and reviews count
+        # only when the source supplied them, avoiding fake-review comparisons.
+        if highest_price > lowest_price:
+            price_score = 100 * (highest_price - price) / (highest_price - lowest_price)
+        else:
+            price_score = 100
+        rating_score = rating * 20
+        review_score = min(100, math.log10(review_count + 1) * 25) if review_count else 0
+        stock_score = 100 if "in stock" in availability else 50 if availability else 0
+
+        listing["value_score"] = round(
+            price_score * 0.45 + rating_score * 0.35 + review_score * 0.10 + stock_score * 0.10,
+            1,
+        )
+
+    best_listing = max(listings, key=lambda item: item["value_score"])
+    best_listing["is_recommended"] = True
+    product["recommended_listing_id"] = best_listing["id"]
+    product["recommendation_score"] = best_listing["value_score"]
+    product["comparison_summary"] = {
+        "lowest_price": lowest_price,
+        "highest_price": highest_price,
+        "potential_saving": round(highest_price - lowest_price, 2),
+        "retailers_compared": len(listings),
+    }
 import os
 import requests
 from pymongo import MongoClient

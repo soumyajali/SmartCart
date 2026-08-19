@@ -49,18 +49,6 @@ export const getAnalytics = async () => {
   }
 };
 
-export const getSystemHealth = async () => {
-  try {
-    const response = await axios.get(`${API_BASE_URL}/admin/health`);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw error.response.data || { message: 'An unknown error occurred.' };
-    }
-    throw { message: 'Unable to connect to the backend server.' };
-  }
-};
-
 export const retrainModel = async () => {
   try {
     // Direct call to ML service
